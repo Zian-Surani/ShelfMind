@@ -1,0 +1,4 @@
+store-welcome.jpg
+Source: https://images.unsplash.com/photo-1542838132-92c53300491e
+Downloaded at 1920px width for the welcome-page background.
+Illustrative store photo only; not a ShelfWatch upload or inventory record.

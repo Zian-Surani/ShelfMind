@@ -1,0 +1,2 @@
+"""ShelfMind backend package."""
+

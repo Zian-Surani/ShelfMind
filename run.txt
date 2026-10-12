@@ -1,0 +1,124 @@
+SHELFMIND - LOCAL DEVELOPMENT (WINDOWS POWERSHELL)
+================================================
+
+Project: C:\Users\zians\Downloads\SHELF MIND
+Frontend: http://127.0.0.1:5174
+Backend:  http://127.0.0.1:8001
+API docs: http://127.0.0.1:8001/docs
+
+Use two separate PowerShell terminals and keep both running.
+These ports avoid the applications currently using 8000 and 5173.
+Open the exact frontend URL above, not an older tab on port 5173.
+
+FIRST-TIME SETUP
+---------------
+Prerequisites: Python 3.11, Node.js/npm, and internet access to Supabase.
+Keep the existing backend\.env with your database connection settings.
+Do not put database passwords or service-role keys in the frontend.
+
+Backend dependencies:
+
+cd "C:\Users\zians\Downloads\SHELF MIND\backend"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m alembic upgrade head
+
+Frontend dependencies:
+
+cd "C:\Users\zians\Downloads\SHELF MIND\frontend"
+npm install
+
+The supplied CSV is already imported into the configured Supabase database.
+Only for a fresh database or an intentional import, run from backend:
+
+.\.venv\Scripts\python.exe -m app.import_history ..\shelfmind_retail_history.csv --provenance simulated
+
+This CSV is simulated history. Unchanged records are skipped on re-import.
+Analytics reads the saved Supabase entries automatically. You do not need to
+upload the CSV again when reopening the app or restarting either server.
+Import a CSV only when adding new history. This is not a live POS feed.
+Do not reset the database as part of normal startup.
+
+DAILY STARTUP - TERMINAL 1: BACKEND
+---------------------------------
+cd "C:\Users\zians\Downloads\SHELF MIND\backend"
+$env:SHELFMIND_CORS_ORIGINS = "http://127.0.0.1:5174,http://localhost:5174"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+
+Run from the backend folder so its .env is loaded.
+If using the existing global Python installation with dependencies already
+installed, replace .\.venv\Scripts\python.exe with python.
+Virtual-environment activation is not required with the commands above.
+
+DAILY STARTUP - TERMINAL 2: FRONTEND
+----------------------------------
+cd "C:\Users\zians\Downloads\SHELF MIND\frontend"
+$env:VITE_API_BASE_URL = "http://127.0.0.1:8001"
+npm run dev -- --host 127.0.0.1 --port 5174 --strictPort
+
+Open http://127.0.0.1:5174 in your browser.
+The welcome page opens first. Select Dive in to open Image review.
+The Exit button in the dashboard header returns to the welcome page.
+Exit does not delete store data or stop either development server.
+Port 8001 serves the backend API, not the frontend landing page.
+The environment variables above apply to that terminal session. Run the
+startup commands again whenever you open new terminals.
+
+CONNECTION CHECK - OPTIONAL THIRD TERMINAL
+-----------------------------------------
+Invoke-RestMethod http://127.0.0.1:8001/health
+(Invoke-RestMethod http://127.0.0.1:8001/openapi.json).info.title
+
+Expected health: status = ok, database = connected.
+Expected API title: ShelfMind Backend.
+If you see ELEVATE or another application, you are using the wrong port.
+
+IMAGE REVIEW
+------------
+ShelfMind includes its detector code and model in backend\models\best.onnx.
+The separate ShelfWatch folder/server is no longer required. Include this
+model when moving the project to another machine. Install requirements.txt
+again after this update for the MDP dependencies.
+
+Upload up to 12 photos (10 MB each), select an item ID, enter the verified
+total available quantity, and confirm it before selecting Evaluate item.
+Photo counts are not automatically summed: duplicate views and stock
+outside the photos require human verification. Repeat for other item IDs.
+The detector numbers visible objects but does not identify their SKU.
+
+Photos, measured quality, reviews and decisions persist in the database.
+Each item has demand/sales, verified-count and calculated MDP action graphs.
+Blurry or uncertain photos block auto-approval but allow human review.
+Settings controls human approval or guarded auto-approval within budgets.
+Approvals record recommendations only, not supplier orders or inventory
+changes. Above-target stock means hold replenishment, not discard stock.
+The existing generated CSV stays explicitly labeled as simulated history.
+Advanced navigation retains the older overview/research screens.
+
+Blur threshold defaults to 60 (heuristic Laplacian variance). To tune it,
+set SHELFMIND_VISION_BLUR_THRESHOLD in backend\.env and restart the API.
+See backend\models\README.md before redistributing the model commercially.
+
+STOPPING AND TROUBLESHOOTING
+---------------------------
+- Press Ctrl+C in each server terminal to stop that server.
+- If a selected port is occupied, choose another free port. Update the
+  backend --port and frontend VITE_API_BASE_URL together. If changing the
+  frontend --port, also update backend SHELFMIND_CORS_ORIGINS.
+- Restart the frontend after changing VITE_API_BASE_URL and the backend
+  after changing its environment variables.
+- A ShelfMind API 404 can mean the frontend is calling another application.
+  The default backend URL is now http://127.0.0.1:8001. Remove or correct any
+  old VITE_API_BASE_URL override pointing at 8000, then restart the frontend.
+- --strictPort prevents Vite silently choosing an unexpected port.
+- A CORS error usually means the browser origin does not match the
+  backend's configured frontend URL.
+- These commands run local development servers, not a public deployment.
+
+OPTIONAL CHECKS
+---------------
+Backend tests (from backend; tests use SQLite, not Supabase):
+.\.venv\Scripts\python.exe -m pytest -q tests
+
+Frontend production build (from frontend):
+npm run build
